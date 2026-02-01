@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+set -e
+
+echo "🚀 Starting Swiftbot AI + Yed Workspace..."
+
+################################
+# 1️⃣ Load AI keys
+################################
+if [[ -z "$GOOGLE_API_KEY" || -z "$OPENAI_API_KEY" ]]; then
+    echo "⚠️ AI keys not found! Set GOOGLE_API_KEY and OPENAI_API_KEY in Codespaces secrets."
+else
+    export GOOGLE_API_KEY=$GOOGLE_API_KEY
+    export OPENAI_API_KEY=$OPENAI_API_KEY
+    echo "🔐 AI keys loaded."
+fi
+
+################################
+# 2️⃣ Node dependencies
+################################
+if [ -f package.json ]; then
+    echo "📦 Installing Node packages..."
+    npm install
+fi
+
+################################
+# 3️⃣ Python environment
+################################
+echo "🐍 Setting up Python virtual environment..."
+python3 -m venv venv || true
+source venv/bin/activate
+pip install --upgrade pip
+if [ -f requirements.txt ]; then
+    pip install -r requirements.txt
+fi
+
+################################
+# 4️⃣ Swift backend
+################################
+if command -v swift >/dev/null 2>&1; then
+    echo "🧠 Building Swiftbot backend..."
+    swift build || true
+fi
+
+################################
+# 5️⃣ Docker stack
+################################
+if [ -f docker-compose.yml ]; then
+    echo "🐳 Building and starting Docker stack..."
+    docker compose build || true
+    docker compose up -d
+fi
+
+################################
+# 6️⃣ Frontend scaffold
+################################
+if [ ! -d liveblocks-ui ]; then
+    echo "⚛️ Creating Liveblocks UI..."
+    mkdir liveblocks-ui
+    cd liveblocks-ui
+    npx create-liveblocks-app@latest --init --framework react
+    cd ..
+fi
+
+################################
+# 7️⃣ Start backend & frontend
+################################
+echo "🏁 Launching Swiftbot backend..."
+if command -v swift >/dev/null 2>&1; then
+    swift run swiftbot chat &
+fi
+
+echo "🏁 Launching frontend..."
+if [ -f package.json ]; then
+    npm run dev &
+fi
+
+################################
+# 8️⃣ Launch Yed (graph editor)
+################################
+if command -v yed >/dev/null 2>&1; then
+    echo "🖤 Launching Yed..."
+    yed &
+else
+    echo "⚠️ Yed not found. Please install Yed manually or add it to PATH."
+fi
+
+################################
+# 9️⃣ Done
+################################
+echo "✅ Swiftbot AI + Yed Workspace fully running!"
+echo "Frontend port 3000, Backend port 8000 (Codespaces forwarded)."
+echo "Use CTRL+C to stop all background processes if needed."
+wait
